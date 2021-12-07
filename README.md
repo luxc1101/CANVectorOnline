@@ -4,12 +4,12 @@
 
 ## offline mode 
 
-![offline mode Gif](./Image/offline mode.gif)
+![offline mode Gif](./Image/offline_mode.gif)
 
 1. 运行 **CANanalysis.py** 文件:<br />
-![offline mode](./Image/offline mode.png)
+![offline mode](./Image/offline_mode.png)
 2. 运行 **video player**:<br />
-![video player](./Image/media player.png)
+![video player](./Image/media_player.png)
 
 ### 注意事项
 1. [K-Lite Codec Pack](https://www.codecguide.com/download_k-lite_codec_pack_basic.htm) 用于 **voide player** 功能的使用, 需要预先下载才能播放视频
@@ -17,7 +17,7 @@
 3. 如果想要读取**ZLG**记录的**asc**文件必须使用**ZLG Transfer**功能进行格式转化，然后再加载转化后的.asc/.dat数据
 
 ## online mode
-![online mode Gif](./Image/online mode.gif)
+![online mode Gif](./Image/online_mode.gif)
 
 1. 在菜单栏选择**vector->py can** 进入**online mode**<br />
 2. 在**simulation**的情况下(如下图)需要设置**sender**和**receiver**的参数<br />
