@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(['vectorGUI.py'],
-             pathex=['C:\\Code\\Tools\\CanAutoanalysis\\GUITools_lxc\\PythonCANanlyer'],
+             pathex=['C:\\Code\\Tools\\CANVectorOnline'],
              binaries=[],
              datas=[],
              hiddenimports=[],
