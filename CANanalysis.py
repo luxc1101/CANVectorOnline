@@ -112,6 +112,10 @@ class Ui_LUXC(QMainWindow):
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
+        self.lb_quckselector = QtWidgets.QLabel(self.centralwidget)
+        self.lb_quckselector.setAlignment(QtCore.Qt.AlignCenter)
+        self.lb_quckselector.setObjectName("lb_quckselector")
+        self.horizontalLayout.addWidget(self.lb_quckselector)
         self.zero = QtWidgets.QCheckBox(self.centralwidget)
         self.zero.setObjectName("zero")
         self.horizontalLayout.addWidget(self.zero)
@@ -136,6 +140,20 @@ class Ui_LUXC(QMainWindow):
         self.sieben = QtWidgets.QCheckBox(self.centralwidget)
         self.sieben.setObjectName("sieben")
         self.horizontalLayout.addWidget(self.sieben)
+        self.lb_startbit = QtWidgets.QLabel(self.centralwidget)
+        self.lb_startbit.setAlignment(QtCore.Qt.AlignCenter)
+        self.lb_startbit.setObjectName("lb_startbit")
+        self.horizontalLayout.addWidget(self.lb_startbit)
+        self.spinBox_startbit = QtWidgets.QSpinBox(self.centralwidget)
+        self.spinBox_startbit.setObjectName("spinBox_startbit")
+        self.horizontalLayout.addWidget(self.spinBox_startbit)
+        self.lb_length = QtWidgets.QLabel(self.centralwidget)
+        self.lb_length.setAlignment(QtCore.Qt.AlignCenter)
+        self.lb_length.setObjectName("lb_length")
+        self.horizontalLayout.addWidget(self.lb_length)
+        self.spinBox_length = QtWidgets.QSpinBox(self.centralwidget)
+        self.spinBox_length.setObjectName("spinBox_length")
+        self.horizontalLayout.addWidget(self.spinBox_length)
         self.getbit = QtWidgets.QPushButton(self.centralwidget)
         font = QtGui.QFont()
         font.setPointSize(9)
@@ -205,6 +223,7 @@ class Ui_LUXC(QMainWindow):
         self.gridLayout_2.addWidget(self.LoadButton, 0, 2, 1, 1)
         self.radioButton = QtWidgets.QRadioButton(self.centralwidget)
         self.radioButton.setObjectName("radioButton")
+        self.radioButton.setEnabled(False)
         self.gridLayout_2.addWidget(self.radioButton, 0, 3, 1, 1)
         self.gridLayout.addLayout(self.gridLayout_2, 0, 1, 1, 2)
         self.verticalLayout = QtWidgets.QVBoxLayout()
@@ -262,7 +281,7 @@ class Ui_LUXC(QMainWindow):
         self.LoadButton.clicked.connect(lambda: self.load_data())
         self.radioButton.toggled.connect(lambda: self.tablefit(self.df))
         self.comboBox.activated[str].connect(lambda: self.Messagefilter())
-        self.getbit.clicked.connect(lambda: self.bitselection())
+        self.getbit.clicked.connect(lambda: self.signalplot())
         self.logging.clicked.connect(lambda: self.logfile())
         self.comboBox_2.currentIndexChanged.connect(lambda: self.graphplot(x = self.x, y= self.value, ID = self.comboBox.currentText()))
 
@@ -273,6 +292,7 @@ class Ui_LUXC(QMainWindow):
         __sortingEnabled = self.tableWidget.isSortingEnabled()
         # self.tableWidget.setSortingEnabled(False)
         # self.tableWidget.setSortingEnabled(__sortingEnabled)
+        self.lb_quckselector.setText(_translate("LUXC", "Quick Slector"))
         self.zero.setText(_translate("LUXC", "0"))
         self.eins.setText(_translate("LUXC", "1"))
         self.zwei.setText(_translate("LUXC", "2"))
@@ -281,6 +301,8 @@ class Ui_LUXC(QMainWindow):
         self.funf.setText(_translate("LUXC", "5"))
         self.sechs.setText(_translate("LUXC", "6"))
         self.sieben.setText(_translate("LUXC", "7"))
+        self.lb_startbit.setText(_translate("LUXC", "Startbit"))
+        self.lb_length.setText(_translate("LUXC", "Length"))
         self.getbit.setText(_translate("LUXC", "Go"))
         self.radioButton.setText(_translate("LUXC", "show in table"))
         self.logging.setText(_translate("LUXC", "Logging"))
@@ -308,6 +330,9 @@ class Ui_LUXC(QMainWindow):
         file = QFileDialog.getOpenFileName(parent = self, caption = "Open File",directory= "", filter= "Data file (*.asc)")
         fileName, ext = file[0], file[1]
         self.show_file_path(fileName)
+        self.comboBox.clear()
+        self.radioButton.setEnabled(True)
+        self.radioButton.setChecked(False)
         print(fileName)
     # create a asc file
     def WRITE_ASC(self, w_path):
@@ -432,53 +457,71 @@ class Ui_LUXC(QMainWindow):
             self.graphicsView.plot(x, y, name = ID, pen = pen)
         self.graphicsView.setLabel('bottom', 'Time [s]')
         self.graphicsView.addLegend()
+
+
     # select start bit and multi bytecombination and plot 
     def bitselection(self):
-            checklist = [False]*8
-            if self.zero.isChecked(): checklist[0]    = True
-            if self.eins.isChecked(): checklist[1]    = True
-            if self.zwei.isChecked(): checklist[2]    = True
-            if self.drei.isChecked(): checklist[3]    = True
-            if self.vier.isChecked(): checklist[4]    = True
-            if self.funf.isChecked(): checklist[5]    = True
-            if self.sechs.isChecked(): checklist[6]   = True
-            if self.sieben.isChecked(): checklist[7]  = True
-            else: checklist = checklist
-            try:
-                columns = np.array(list(self.df))[-8:][checklist]
-                position = [int(idx) + 6 for idx in columns]
-                for colposi in range(len(list(self.df))):
-                    if colposi not in position:
-                        self.headercolor(colposi)
-                    else:
-                        self.headercolor(colposi,QtGui.QColor(255,0,0))
-                print(columns)
-                if len(columns) != 0:
-                    if self.comboBox.currentText() == 'all':
-                        self.x  = self.df.timestamp.values.astype(np.float64)
-                        value   = np.fliplr(self.df[columns].values)
-                        value   = np.sum(value,dtype = object, axis = 1)
-                        npfunc_hex_to_dec  = np.vectorize(lambda x: int(x, 16))
-                        npfunc_dec_to_hex  = np.vectorize(lambda x: '{:x}'.format(x))
-                        self.value   = npfunc_hex_to_dec(value)
-                    else:
+        checklist = [False]*8
+        if self.zero.isChecked(): checklist[0]    = True
+        if self.eins.isChecked(): checklist[1]    = True
+        if self.zwei.isChecked(): checklist[2]    = True
+        if self.drei.isChecked(): checklist[3]    = True
+        if self.vier.isChecked(): checklist[4]    = True
+        if self.funf.isChecked(): checklist[5]    = True
+        if self.sechs.isChecked(): checklist[6]   = True
+        if self.sieben.isChecked(): checklist[7]  = True
+        else: checklist = checklist
+        return checklist
+
+    def bitselection2(self, hexdata):
+        startbit = self.spinBox_startbit.value()
+        datalength = self.spinBox_length.value()
+        end_length = len(hexdata)*4
+        hex_as_int = int(hexdata, 16)
+        hex_as_binary = bin(hex_as_int)
+        padded_binary = hex_as_binary[2:].zfill(end_length)
+        layout_arr = np.array(list(padded_binary)).reshape(8,8)[::-1].reshape(1,-1)
+        end = -1*startbit
+        start = end - datalength
+        return int(layout_arr[:,start:end].astype(object).sum(dtype = object, axis = 1)[0],2)
+    
+    def signalplot(self):
+            checklist = self.bitselection()
+            if self.comboBox.currentText() != '':
+                if self.comboBox.currentText() != 'all':
+                    if (True in checklist) and (self.spinBox_length.value() == 0):
+                        columns = np.array(list(self.df))[-8:][checklist]
+                        position = [int(idx) + 6 for idx in columns]
+                        for colposi in range(len(list(self.df))):
+                            if colposi not in position:
+                                self.headercolor(colposi)
+                            else:
+                                self.headercolor(colposi,QtGui.QColor(255,0,0))
                         self.x  = self.df[self.df["ID"] == self.comboBox.currentText()].timestamp.values.astype(np.float64)
                         value   = np.fliplr(self.df[self.df["ID"] == self.comboBox.currentText()][columns].values)
                         value   = np.sum(value,dtype = object, axis = 1)
                         npfunc_hex_to_dec  = np.vectorize(lambda x: int(x, 16))
                         npfunc_dec_to_hex  = np.vectorize(lambda x: '{:x}'.format(x))
                         self.value   = npfunc_hex_to_dec(value)
-                    self.graphplot(self.x,self.value,self.comboBox.currentText())
+                        self.graphplot(self.x,self.value,self.comboBox.currentText())
+                        self.plainTextEdit.appendPlainText('Message ID: {} Byte: {}'.format(self.comboBox.currentText(),columns))
+                    if (True not in checklist) and (self.spinBox_length.value() != 0):
+                        data = self.df[self.df["ID"] == self.comboBox.currentText()]
+                        self.x  = data.timestamp.values.astype(np.float64)
+                        value   = data.iloc[:,-8:].values
+                        value   = np.sum(value,dtype = object, axis = 1)
+                        npfunc_hex_to_dec = np.vectorize(lambda x: self.bitselection2(x))
+                        self.value   = npfunc_hex_to_dec(value)
+                        self.graphplot(self.x,self.value,self.comboBox.currentText())
+                        self.plainTextEdit.appendPlainText('Message ID: {} startbit: {} bitlength: {}'.format(self.comboBox.currentText(), self.spinBox_startbit.value(), self.spinBox_length.value()))
+                    else:
+                        QMessageBox.warning(self, "Warning", "please select data of current message ID")
+
                 else:
-                    QMessageBox.warning(self, "Warning", "please select data of current message ID")
-            except AttributeError:
+                    QMessageBox.critical(self, "Warning", "please select message ID")
+            else:
                 QMessageBox.critical(self, "Error", "please load data first")
                 self.openfile()
-            except OverflowError:
-                QMessageBox.critical(self, "Error", "int too big to convert")
-
-            self.plainTextEdit.appendPlainText('Message ID: {} Byte: {}'.format(self.comboBox.currentText(),columns))
-
 
     def logfile(self):
         # name = QFileDialog.getSaveFileName(self, 'Save File', filter="Dat Files (*.dat)")
