@@ -239,9 +239,9 @@ class Ui_V_Online(QMainWindow):
         self.toolButton.setObjectName("toolButton")
         self.gridLayout.addWidget(self.toolButton, 1, 7, 1, 1)
 
-        self.radioButton_R = QtWidgets.QRadioButton(self.centralwidget)
-        self.radioButton_R.setObjectName("radioButton")
-        self.gridLayout.addWidget(self.radioButton_R, 0, 7, 1, 2)
+        self.CB_R = QtWidgets.QCheckBox(self.centralwidget)
+        self.CB_R.setObjectName("radioButton")
+        self.gridLayout.addWidget(self.CB_R, 0, 7, 1, 2)
 
         self.comboBox_sender_chn = QtWidgets.QComboBox(self.centralwidget)
         self.comboBox_sender_chn.setObjectName("comboBox_sender_chn")
@@ -366,7 +366,7 @@ class Ui_V_Online(QMainWindow):
         self.label_9.setText(_translate("V_Online", "Channel"))
         self.bitrate_sender.setText(_translate("V_Online", "500000"))
         self.toolButton.setText(_translate("V_Online", "Open File"))
-        self.radioButton_R.setText(_translate("V_Online", "Repeat"))
+        self.CB_R.setText(_translate("V_Online", "Repeat"))
         self.comboBox_sender_chn.setItemText(0, _translate("V_Online", '0'))
         self.comboBox_sender_chn.setItemText(1, _translate("V_Online", '1'))
         self.comboBox_sender_chn.setItemText(2, _translate("V_Online", '2'))
@@ -459,7 +459,7 @@ class Ui_V_Online(QMainWindow):
                                     bitrate   = int(self.bitrate_sender.text()),
                                     serial    = int(self.sender_serial.text()),
                                     app_name  = self.comboBox_sender_app.currentText(),
-                                    r_btn     = self.radioButton_R.isChecked(),
+                                    r_btn     = self.CB_R.isChecked(),
                                     ascfile   = self.fileopen_le.text())
         try:
             QMessageBox.critical(self,'Error', self.thread[1].error)
@@ -475,13 +475,13 @@ class Ui_V_Online(QMainWindow):
             self.comboBox_sender_chn.setEnabled(True)
             self.comboBox_sender_app.setEnabled(True)
             self.toolButton.setEnabled(True) 
-            self.radioButton_R.setEnabled(True)
+            self.CB_R.setEnabled(True)
         else: 
             self.StartSBtn.setEnabled(False)
             self.comboBox_sender_chn.setEnabled(False)
             self.comboBox_sender_app.setEnabled(False)
             self.toolButton.setEnabled(False)
-            self.radioButton_R.setEnabled(False)
+            self.CB_R.setEnabled(False)
 
     def stop_sending(self):
         # stop sending message
@@ -491,7 +491,7 @@ class Ui_V_Online(QMainWindow):
         self.comboBox_sender_chn.setEnabled(True)
         self.comboBox_sender_app.setEnabled(True)
         self.toolButton.setEnabled(True)
-        self.radioButton_R.setEnabled(True)
+        self.CB_R.setEnabled(True)
 ####################################################
 #                                                 
 #                  Receiver                       
