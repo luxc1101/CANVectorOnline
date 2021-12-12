@@ -238,6 +238,11 @@ class Ui_V_Online(QMainWindow):
         self.toolButton.setFont(font)
         self.toolButton.setObjectName("toolButton")
         self.gridLayout.addWidget(self.toolButton, 1, 7, 1, 1)
+
+        self.radioButton_R = QtWidgets.QRadioButton(self.centralwidget)
+        self.radioButton_R.setObjectName("radioButton")
+        self.gridLayout.addWidget(self.radioButton_R, 0, 7, 1, 2)
+
         self.comboBox_sender_chn = QtWidgets.QComboBox(self.centralwidget)
         self.comboBox_sender_chn.setObjectName("comboBox_sender_chn")
         self.comboBox_sender_chn.addItem("")
@@ -361,6 +366,7 @@ class Ui_V_Online(QMainWindow):
         self.label_9.setText(_translate("V_Online", "Channel"))
         self.bitrate_sender.setText(_translate("V_Online", "500000"))
         self.toolButton.setText(_translate("V_Online", "Open File"))
+        self.radioButton_R.setText(_translate("V_Online", "Repeat"))
         self.comboBox_sender_chn.setItemText(0, _translate("V_Online", '0'))
         self.comboBox_sender_chn.setItemText(1, _translate("V_Online", '1'))
         self.comboBox_sender_chn.setItemText(2, _translate("V_Online", '2'))
@@ -452,7 +458,9 @@ class Ui_V_Online(QMainWindow):
                                     channel   = [int(self.comboBox_sender_chn.currentText())],
                                     bitrate   = int(self.bitrate_sender.text()),
                                     serial    = int(self.sender_serial.text()),
-                                    app_name  = self.comboBox_sender_app.currentText())
+                                    app_name  = self.comboBox_sender_app.currentText(),
+                                    r_btn     = self.radioButton_R.isChecked(),
+                                    ascfile   = self.fileopen_le.text())
         try:
             QMessageBox.critical(self,'Error', self.thread[1].error)
         except:
@@ -467,11 +475,13 @@ class Ui_V_Online(QMainWindow):
             self.comboBox_sender_chn.setEnabled(True)
             self.comboBox_sender_app.setEnabled(True)
             self.toolButton.setEnabled(True) 
+            self.radioButton_R.setEnabled(True)
         else: 
             self.StartSBtn.setEnabled(False)
             self.comboBox_sender_chn.setEnabled(False)
             self.comboBox_sender_app.setEnabled(False)
             self.toolButton.setEnabled(False)
+            self.radioButton_R.setEnabled(False)
 
     def stop_sending(self):
         # stop sending message
@@ -481,6 +491,7 @@ class Ui_V_Online(QMainWindow):
         self.comboBox_sender_chn.setEnabled(True)
         self.comboBox_sender_app.setEnabled(True)
         self.toolButton.setEnabled(True)
+        self.radioButton_R.setEnabled(True)
 ####################################################
 #                                                 
 #                  Receiver                       
@@ -665,7 +676,7 @@ class ReceiveThread(QThread):
 class SendThread(QThread):
     """Thread for Sending CAN Message"""
     tx_signal = pyqtSignal(can.message.Message)
-    def __init__(self, parent, tx_msg, channel:list, bitrate: int, serial: int, app_name: str):
+    def __init__(self, parent, tx_msg, channel:list, bitrate: int, serial: int, app_name: str, r_btn: bool, ascfile: str):
         super(SendThread, self).__init__(parent)
         self.is_running  = True
         self.connected   = False
@@ -675,6 +686,8 @@ class SendThread(QThread):
         self.serial      = serial
         self.app_name    = app_name
         self.fd          = True
+        self.repeat_btn  = r_btn
+        self.ascfile        = ascfile
         try:
             self.bus = can.interfaces.vector.VectorBus(channel= self.channel,
                                                     poll_interval=0.0001, 
@@ -700,13 +713,23 @@ class SendThread(QThread):
                     time.sleep(0.01)
             if type(self.tx_msg).__name__ == 'ASCReader':
                 # start_time = 0.0
-                for msg in self.tx_msg:
-                    msg.timestamp = time.time()-start_time
-                    self.bus.send(msg)
-                    self.tx_signal.emit(msg)
-                    # print('tx:{}'.format(msg))
-                    time.sleep(0.00001)
-                    # start_time = msg.timestamp
+                if self.repeat_btn and self.ascfile !='':
+                    while True:
+                        for msg in self.tx_msg:
+                            msg.timestamp = time.time()-start_time
+                            self.bus.send(msg)
+                            self.tx_signal.emit(msg)
+                            # print('tx:{}'.format(msg))
+                            time.sleep(0.00001)
+                        self.tx_msg = can.ASCReader(file = self.ascfile)
+                else: 
+                    for msg in self.tx_msg:
+                        msg.timestamp = time.time()-start_time
+                        self.bus.send(msg)
+                        self.tx_signal.emit(msg)
+                        # print('tx:{}'.format(msg))
+                        time.sleep(0.00001)
+
 
     def stop(self):
         self.is_running = False
@@ -750,17 +773,7 @@ class CANgraph(QThread):
         layout_arr = np.array(list(padded_binary)).reshape(8,8)[::-1].reshape(1,-1)
         end = -1*self.startbit
         start = end - self.datalength
-        return int(layout_arr[:,start:end].astype(object).sum(dtype = object, axis = 1)[0],2)
-        
-
-        # print(layout_arr)
-        # row = self.startbit//8
-        # columns = 7-(self.startbit-(self.startbit//8*8))
-        # if (columns-self.datalength+1) >= 0:
-        #     return int(layout_arr[row,columns-self.datalength+1:columns+1].astype(object).reshape((1,-1)).sum(dtype = object, axis = 1)[0],2)
-        # if (columns-self.datalength+1) < 0:
-        #     print('another row')
-            
+        return int(layout_arr[:,start:end].astype(object).sum(dtype = object, axis = 1)[0],2)        
 
     def run(self):
         timestamp = self.receiver.rx_signal_dataplot.timestamp - self.timestampoffset
