@@ -260,6 +260,16 @@ class Ui_V_Online(QMainWindow):
         self.gridLayout.addWidget(self.StartRBtn, 1, 4, 1, 1)
         self.logpath_le = QtWidgets.QLineEdit(self.centralwidget)
         self.logpath_le.setObjectName("logpath_le")
+        self.ByteOrderComBo = QtWidgets.QComboBox(self.centralwidget)
+        self.ByteOrderComBo.setObjectName("ByteOrderComBo")
+        self.ByteOrderComBo.addItem("")
+        self.ByteOrderComBo.addItem("")
+        self.gridLayout.addWidget(self.ByteOrderComBo, 0, 3, 1, 1)
+
+
+        self.ByteOrderlabel = QtWidgets.QLabel(self.centralwidget)
+        self.ByteOrderlabel.setObjectName("ByteOrderlabel")
+        self.gridLayout.addWidget(self.ByteOrderlabel, 0, 2, 1, 1)
         self.gridLayout.addWidget(self.logpath_le, 1, 3, 1, 1)
         self.fileopen_le = QtWidgets.QLineEdit(self.centralwidget)
         self.fileopen_le.setObjectName("fileopen_le")
@@ -383,6 +393,9 @@ class Ui_V_Online(QMainWindow):
         self.TraceWidget.setTabText(self.TraceWidget.indexOf(self.tabsend), _translate("V_Online", "Send"))
         # self.trackmessage.setText(_translate("V_Online", "Showing the tracked message"))
         self.trackmessage.setPlaceholderText(_translate("V_Online", "Showing the tracked message"))
+        self.ByteOrderlabel.setText(_translate("V_Online", "Byte Order"))
+        self.ByteOrderComBo.setItemText(0, _translate("V_Online", "Intel"))
+        self.ByteOrderComBo.setItemText(1, _translate("V_Online", "Motorola"))
 ####################################################
 #                                                 
 #                  Graphics                       
@@ -400,7 +413,10 @@ class Ui_V_Online(QMainWindow):
             QMessageBox.information(self,'Info', 'Please select starbit and length')
         else:
             self.graphicsView.clear()
-            self.thread[3] = CANgraph(parent = None, plotWidget=self.graphicsView, title= title, receiver=self.thread[2], mask=self.bitselection(), mask2=self.bitselection2())
+            self.thread[3] = CANgraph(parent = None, plotWidget=self.graphicsView, 
+                                            title= title, receiver=self.thread[2], 
+                                            mask=self.bitselection(), mask2=self.bitselection2(), 
+                                            ByteOrder = self.ByteOrderComBo.currentText())
             self.thread[3].start()
             self.dataplot.setEnabled(False)
             self.zero.setEnabled(False)
@@ -720,7 +736,7 @@ class SendThread(QThread):
                             self.bus.send(msg)
                             self.tx_signal.emit(msg)
                             # print('tx:{}'.format(msg))
-                            time.sleep(0.00001)
+                            time.sleep(1e-8)
                         self.tx_msg = can.ASCReader(file = self.ascfile)
                 else: 
                     for msg in self.tx_msg:
@@ -728,7 +744,7 @@ class SendThread(QThread):
                         self.bus.send(msg)
                         self.tx_signal.emit(msg)
                         # print('tx:{}'.format(msg))
-                        time.sleep(0.00001)
+                        time.sleep(1e-8)
 
 
     def stop(self):
@@ -737,7 +753,7 @@ class SendThread(QThread):
 
 
 class CANgraph(QThread):
-    def __init__(self, parent, plotWidget, title, receiver, mask, mask2):
+    def __init__(self, parent, plotWidget, title, receiver, mask, mask2, ByteOrder):
         super(CANgraph, self).__init__(parent)
         self.is_running = True
         # self.msg = msg
@@ -763,6 +779,7 @@ class CANgraph(QThread):
         self.timer = pg.QtCore.QTimer()
         self.timer.timeout.connect(self.run)
         self.timer.start(1) # unit: ms
+        self.ByteOrder = ByteOrder
 
     def mask2(self, data):
         hexadecimal  = data.hex()
@@ -770,10 +787,18 @@ class CANgraph(QThread):
         hex_as_int = int(hexadecimal, 16)
         hex_as_binary = bin(hex_as_int)
         padded_binary = hex_as_binary[2:].zfill(end_length)
-        layout_arr = np.array(list(padded_binary)).reshape(8,8)[::-1].reshape(1,-1)
-        end = -1*self.startbit
-        start = end - self.datalength
-        return int(layout_arr[:,start:end].astype(object).sum(dtype = object, axis = 1)[0],2)        
+        if self.ByteOrder == 'Intel':
+            layout_arr   = np.array(list(padded_binary)).reshape(8,8)[::-1].reshape(1,-1)
+            end          = -1*self.startbit
+            start        = end - self.datalength
+            value_final  = np.squeeze(layout_arr)[start:] if end == 0 else np.squeeze(layout_arr)[start:end]
+        elif self.ByteOrder == 'Motorola':
+            layout_arr   = np.array(list(padded_binary)).reshape(8,8).reshape(1,-1)
+            end          = self.startbit + self.datalength
+            start        = self.startbit
+            value_final  = np.squeeze(layout_arr)[start:end]
+        # print(int(value_final.astype(object).sum(dtype = object),2))
+        return int(value_final.astype(object).sum(dtype = object),2)      
 
     def run(self):
         timestamp = self.receiver.rx_signal_dataplot.timestamp - self.timestampoffset
